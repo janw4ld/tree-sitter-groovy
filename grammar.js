@@ -30,7 +30,7 @@ module.exports = grammar({
 
   extras: $ => [/\s/, $.comment, $.groovy_doc],
 
-  word: $ => $.identifier,
+  word: null, // TODO: is keyword optimisation possible with `identifier` and `escaped_identifier`?
 
   conflicts: $ => [
     [$._juxt_function_name, $._type],
@@ -102,7 +102,7 @@ module.exports = grammar({
     dotted_identifier: $ => seq(
       $._primary_expression,
       '.',
-      $.identifier,
+      choice($.identifier, $.escaped_identifier),
     ),
 
     _import_name: $ => choice(
@@ -401,7 +401,7 @@ module.exports = grammar({
       optional($.access_modifier),
       repeat($.modifier),
       field('type', choice($._type, 'def')),
-      field('function', $.identifier),
+      field('function', choice($.identifier, $.escaped_identifier)),
       field('parameters', $.parameter_list),
     )),
 
@@ -416,6 +416,12 @@ module.exports = grammar({
     )),
 
     identifier: $ => IDENTIFIER_REGEX,
+
+    escaped_identifier: $ => choice(
+      seq('"', IDENTIFIER_REGEX, '"'),
+      seq('\'', IDENTIFIER_REGEX, '\''),
+    ),
+
     // identifier: $ => seq(
     //   choice($._letter, '$', '_'),
     //   repeat(choice($._letter, '[0-9]', '$', '_'))
@@ -466,6 +472,7 @@ module.exports = grammar({
     map_item: $ => seq(
       field('key', choice(
         $.identifier,
+        $.escaped_identifier,
         $.number_literal,
         $.string,
         $.parenthesized_expression,
